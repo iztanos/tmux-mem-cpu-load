@@ -20,7 +20,9 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <cstdlib> // EXIT_SUCCESS, atoi()
+#include <cerrno>
+#include <climits>
+#include <cstdlib> // EXIT_SUCCESS, strtol()
 #include <getopt.h> // getopt_long
 
 #include "version.h"
@@ -34,6 +36,24 @@
 #include "load.h"
 
 #include "powerline.h"
+
+bool parse_short( const char * value, short min, short max, const char * message,
+  short & result )
+{
+  char * end = NULL;
+  errno = 0;
+  const long parsed = strtol( value, &end, 10 );
+
+  if( errno != 0 || end == value || *end != '\0' ||
+    parsed < min || parsed > max )
+  {
+    std::cerr << message << std::endl;
+    return false;
+  }
+
+  result = static_cast< short >( parsed );
+  return true;
+}
 
 std::string cpu_string( CPU_MODE cpu_mode, unsigned int cpu_usage_delay, unsigned int graph_lines,
     bool use_colors = false,
@@ -215,61 +235,67 @@ int main( int argc, char** argv )
         break;
       case 'l': // --segments-left
         segments_to_left = true;
-        if( atoi( optarg ) < 0 || atoi( optarg ) > 255 )
+        if( !parse_short( optarg, 0, 255,
+          "Valid color values are from 0 to 255.", left_color ) )
         {
-          std::cerr << "Valid color vaues are from 0 to 255.\n";
           return EXIT_FAILURE;
         }
-        left_color = atoi( optarg ) ;
         break;
       case 'r': // --segments-right
         segments_to_right= true;
-        if( atoi( optarg ) < 0 || atoi( optarg ) > 255 )
+        if( !parse_short( optarg, 0, 255,
+          "Valid color values are from 0 to 255.", right_color ) )
         {
-          std::cerr << "Valid color vaues are from 0 to 255.\n";
           return EXIT_FAILURE;
         }
-        right_color = atoi( optarg ) ;
         break;
       case 'i': // --interval, -i
-        if( atoi( optarg ) < 1 )
-          {
-            std::cerr << "Status interval argument must be one or greater.\n";
-            return EXIT_FAILURE;
-          }
-        cpu_usage_delay = atoi( optarg ) * 1000000 - 10000;
+        {
+        short status_interval = 0;
+        if( !parse_short( optarg, 1, 4294,
+          "Status interval argument must be one or greater.", status_interval ) )
+        {
+          return EXIT_FAILURE;
+        }
+        cpu_usage_delay = static_cast< unsigned int >( status_interval ) *
+          1000000u - 10000u;
         break;
+        }
       case 'g': // --graph-lines, -g
-        if( atoi( optarg ) < 0 )
-          {
-            std::cerr << "Graph lines argument must be zero or greater.\n";
-            return EXIT_FAILURE;
-          }
-        graph_lines = atoi( optarg );
+        if( !parse_short( optarg, 0, SHRT_MAX,
+          "Graph lines argument must be zero or greater.", graph_lines ) )
+        {
+          return EXIT_FAILURE;
+        }
         break;
       case 'm': // --mem-mode, -m
-        if( atoi( optarg ) < 0 )
-          {
-            std::cerr << "Memory mode argument must be zero or greater.\n";
-            return EXIT_FAILURE;
-          }
-        mem_mode = static_cast< MEMORY_MODE >( atoi( optarg ) );
+        {
+        short memory_mode = 0;
+        if( !parse_short( optarg, 0, MEMORY_MODE_USAGE_PERCENTAGE,
+          "Valid memory mode arguments are: 0, 1, 2", memory_mode ) )
+        {
+          return EXIT_FAILURE;
+        }
+        mem_mode = static_cast< MEMORY_MODE >( memory_mode );
         break;
+        }
       case 't': // --cpu-mode, -t
-        if( atoi( optarg ) < 0 )
-          {
-            std::cerr << "CPU mode argument must be zero or greater.\n";
-            return EXIT_FAILURE;
-          }
-        cpu_mode = static_cast< CPU_MODE >( atoi( optarg ) );
+        {
+        short parsed_cpu_mode = 0;
+        if( !parse_short( optarg, 0, CPU_MODE_THREADS,
+          "Valid CPU mode arguments are: 0, 1", parsed_cpu_mode ) )
+        {
+          return EXIT_FAILURE;
+        }
+        cpu_mode = static_cast< CPU_MODE >( parsed_cpu_mode );
         break;
+        }
       case 'a': // --averages-count, -a
-        if( atoi( optarg ) < 0 || atoi( optarg ) > 3 )
-          {
-            std::cerr << "Valid averages-count arguments are: 0, 1, 2, 3\n";
-            return EXIT_FAILURE;
-          }
-        averages_count = atoi( optarg );
+        if( !parse_short( optarg, 0, 3,
+          "Valid averages-count arguments are: 0, 1, 2, 3", averages_count ) )
+        {
+          return EXIT_FAILURE;
+        }
         break;
       case '?':
         // getopt_long prints error message automatically

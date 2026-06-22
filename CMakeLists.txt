@@ -121,7 +121,23 @@ if(BUILD_TESTING)
     )
 
   add_test(NAME invalid_graph_lines
-    COMMAND tmux-mem-cpu-load --graph_lines -2
+    COMMAND tmux-mem-cpu-load --graph-lines -2
+    )
+
+  add_test(NAME invalid_graph_lines_text
+    COMMAND tmux-mem-cpu-load --graph-lines abc
+    )
+
+  add_test(NAME invalid_memory_mode_text
+    COMMAND tmux-mem-cpu-load --mem-mode abc
+    )
+
+  add_test(NAME invalid_averages_count_text
+    COMMAND tmux-mem-cpu-load --averages-count abc
+    )
+
+  add_test(NAME invalid_segment_color_text
+    COMMAND tmux-mem-cpu-load --powerline-right --segments-left abc
     )
 
   add_test(NAME old_option_specification
@@ -171,6 +187,10 @@ if(BUILD_TESTING)
   set_tests_properties(usage
     invalid_status_interval
     invalid_graph_lines
+    invalid_graph_lines_text
+    invalid_memory_mode_text
+    invalid_averages_count_text
+    invalid_segment_color_text
     old_option_specification
     PROPERTIES WILL_FAIL TRUE)
 endif()
